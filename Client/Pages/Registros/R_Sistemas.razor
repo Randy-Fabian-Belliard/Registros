@@ -1,0 +1,112 @@
+@page "/RegistroSistemas"
+@page "/RegistroSistemas/{SistemaId:int}"
+@using RegistrosWeb.Shared.Models;
+@inject HttpClient httpClient
+
+<EditForm Model="sistemas" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="container">
+        <div class="card shadow-lg">
+            <div class="card-header">
+                <h3>Registro de Sistema.</h3>
+            </div>
+            <div class=card-body>
+
+                <div class="col-xs-12 col-sm-12 col-md-8 col-lg-6 col-xl-4">
+                    <label>Cliente Id:</label>
+                    <div class="input-group mb-3">
+                        <InputNumber @bind-Value="sistemas.SistemaId" class="form-control" aria-describedby="BotonBuscar" />
+                        <button @onclick="Buscar" class="btn btn-outline-primary" type="button" id="BotonBuscar"><i class="oi oi-magnifying-glass" /></button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="Nombre">Nombre:</label>
+                    <InputText @bind-Value="sistemas.Nombre" class="form-control" />
+                    <ValidationMessage For="@(() => sistemas.Nombre)" />
+                </div>
+
+            </div>
+            <div class="card-footer d-flex justify-content-center">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary" @onclick="Nuevo">Nuevo <i class="oi oi-file" /></button>
+                    <button type="submit" class="btn btn-outline-success">Guardar <i class="oi oi-document" /></button>
+                    <button type="button" class="btn btn-outline-danger" @onclick="Eliminar">Eliminar <i class="oi oi-trash" /></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</EditForm>
+<label>@Mensaje</label>
+
+
+@code {
+
+    [Parameter]
+
+    public int SistemaId { get; set; }
+
+    public Sistemas sistemas { get; set; } = new Sistemas();
+
+    public string Mensaje { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (SistemaId > 0)
+        {
+            this.sistemas.SistemaId = SistemaId;
+            await Buscar();
+        }
+    }
+
+    public async Task Buscar()
+    {
+        var sistemaEncontrado = await httpClient.GetFromJsonAsync<Sistemas>($"api/Sistemas/{sistemas.SistemaId}");
+        if (sistemaEncontrado != null)
+        {
+            this.sistemas = sistemaEncontrado;
+            StateHasChanged();
+        }
+        else
+        {
+            Mensaje = "Sistema no encontrada";
+        }
+    }
+
+    public async void Guardar()
+    {
+        using var response = await httpClient.PostAsJsonAsync("api/Sistemas", sistemas);
+        if (!response.IsSuccessStatusCode)
+        {
+            Mensaje = response.ReasonPhrase ?? "error";
+            return;
+        }
+        var sistemaDevuelto = await response.Content.ReadFromJsonAsync<Sistemas>();
+        if (sistemaDevuelto is not null)
+        {
+            sistemas = sistemaDevuelto;
+            StateHasChanged();
+        }
+    }
+
+    public void Nuevo()
+    {
+        this.sistemas = new Sistemas();
+        Mensaje = string.Empty;
+    }
+
+    public async Task Eliminar()
+    {
+        using var response = await httpClient.DeleteAsync($"api/Sistema/{sistemas.SistemaId}");
+        if (!response.IsSuccessStatusCode)
+        {
+            Mensaje = response.ReasonPhrase ?? "error";
+            return;
+        }
+        else
+            Nuevo();
+    }
+}
